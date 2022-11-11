@@ -1,14 +1,11 @@
-from django.shortcuts import render
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
+from django.contrib.auth.hashers import make_password, check_password
+from .serializers import UserCreateSerializer, UserLoginSerializer
 from rest_framework.decorators import api_view
 from django.contrib.auth import get_user_model
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
-from django.contrib.auth.hashers import make_password, check_password
 from .models import *
-from .serializers import UserCreateSerializer, UserLoginSerializer
-from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 
 User = get_user_model()
 
@@ -16,22 +13,14 @@ User = get_user_model()
 def api_over_view(request):
     if not request.user.is_authenticated:
         data = {
-            "logedin": 'logedin'
+            "Create account API" : 'create/account/',
+            "Login API" : '/login/',
         }
     else:
         data = {
-            "Create account API" : 'create/account/',
-            "Login API" : '/login/',
-            "User details API" : '/user/details/<token>/',
+            "Logout API" : '/logout/',
         }
     return Response(data, status=status.HTTP_200_OK) 
-
-class HelloView(APIView):
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request):
-        content = {'message': 'Hello, World!'}
-        return Response(content)
 
 @api_view(['POST'])
 def create_account(request):
@@ -78,7 +67,7 @@ def create_account(request):
 
             user_ = authenticate(request, username=request.data['username'], password=request.data['password'])
             auth_login(request, user_)
-            return Response({'Token': 'new token'}, status=status.HTTP_201_CREATED)
+            return Response({'Token': 'token-access'}, status=status.HTTP_201_CREATED)
         else:
             print(serializer.errors)
             return Response(serializer.errors, status=status.HTTP_201_CREATED)
@@ -99,7 +88,7 @@ def login(request):
             if user.check_password(request.data.get('password')):
                 user_ = authenticate(request, username=request.data['username'], password=request.data['password'])
                 auth_login(request, user_)
-                return Response({'Token': 'new token'}, status=status.HTTP_201_CREATED)
+                return Response({'Token': 'token-access'}, status=status.HTTP_201_CREATED)
             else:
                 return Response({'error': 'invalid password'}, status=status.HTTP_201_CREATED)
         except User.DoesNotExist:
