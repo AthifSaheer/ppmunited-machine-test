@@ -8,16 +8,22 @@ from rest_framework.views import APIView
 from django.contrib.auth.hashers import make_password, check_password
 from .models import *
 from .serializers import UserCreateSerializer, UserLoginSerializer
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 
 User = get_user_model()
 
 @api_view(['GET'])
 def api_over_view(request):
-    data = {
-        "Create account API" : 'create/account/',
-        "Login API" : '/login/',
-        "User details API" : '/user/details/<token>/',
-    }
+    if not request.user.is_authenticated:
+        data = {
+            "logedin": 'logedin'
+        }
+    else:
+        data = {
+            "Create account API" : 'create/account/',
+            "Login API" : '/login/',
+            "User details API" : '/user/details/<token>/',
+        }
     return Response(data, status=status.HTTP_200_OK) 
 
 class HelloView(APIView):
@@ -70,6 +76,8 @@ def create_account(request):
                 student.save()
             user.save()
 
+            user_ = authenticate(request, username=request.data['username'], password=request.data['password'])
+            auth_login(request, user_)
             return Response({'Token': 'new token'}, status=status.HTTP_201_CREATED)
         else:
             print(serializer.errors)
@@ -89,6 +97,8 @@ def login(request):
         try:
             user = User.objects.get(username=request.data.get('username'))
             if user.check_password(request.data.get('password')):
+                user_ = authenticate(request, username=request.data['username'], password=request.data['password'])
+                auth_login(request, user_)
                 return Response({'Token': 'new token'}, status=status.HTTP_201_CREATED)
             else:
                 return Response({'error': 'invalid password'}, status=status.HTTP_201_CREATED)
@@ -96,3 +106,9 @@ def login(request):
             return Response({'error': 'invalid username'}, status=status.HTTP_201_CREATED)
     
     return Response({"error": 'something went wrong'} ,status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def logout(request):
+    auth_logout(request)
+    return Response({'Success': 'Logged-out successfully'}, status=status.HTTP_201_CREATED)
+    
